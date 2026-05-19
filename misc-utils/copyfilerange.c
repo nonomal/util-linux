@@ -32,6 +32,7 @@
 #include "nls.h"
 #include "closestream.h"
 #include "xalloc.h"
+#include "fileutils.h" /* fallback for copy_file_range() */
 
 static int verbose;
 
@@ -70,8 +71,8 @@ static void __attribute__((__noreturn__)) usage(void)
 
 	fputs(USAGE_ARGUMENTS, out);
 	fputsln(_(" <range> is of the form <source_offset>:<destination_offset>:<length>,\n"
-	          " with all values in bytes. If <length> is 0, as much data as available\n"
-	          " is copied. When an offset is omitted, the last file position is used."), out);
+		" with all values in bytes. If <length> is 0, as much data as available\n"
+		" is copied. When an offset is omitted, the last file position is used."), out);
 
 	fprintf(out, USAGE_MAN_TAIL("copyfilerange(1)"));
 	exit(EXIT_SUCCESS);
@@ -133,23 +134,24 @@ static void copy_range(struct rangeitem *range) {
 	uintmax_t remaining = range->length;
 
 	if (range->in_offset > range->in_st_size)
-		errx(EXIT_FAILURE, _("%s offset %"PRId64" is beyond file size of %"PRId64""),
-		                     range->in_filename, range->in_offset, range->in_st_size);
+		errx(EXIT_FAILURE, _("%s offset %jd is beyond file size of %jd"),
+					range->in_filename, (intmax_t) range->in_offset, (intmax_t) range->in_st_size);
 
 	while (remaining > 0) {
 		const size_t chunk = remaining > SIZE_MAX ? SIZE_MAX : remaining;
 		if (verbose)
-			printf("copy_file_range %s to %s %"PRId64":%"PRId64":%zu\n",
-			       range->in_filename, range->out_filename,
-			       range->in_offset, range->out_offset, chunk);
+			printf("copy_file_range %s to %s %jd:%jd:%zu\n",
+				range->in_filename, range->out_filename,
+				(intmax_t) range->in_offset, (intmax_t) range->out_offset, chunk);
 
 		const ssize_t copied = copy_file_range(range->in_fd, &range->in_offset,
-		                                       range->out_fd, &range->out_offset, chunk, 0);
+						range->out_fd, &range->out_offset, chunk, 0);
 		if (copied < 0)
-			errx(EXIT_FAILURE, _("failed to copy range %"PRId64":%"PRId64":%ju "
-			                     "from %s to %s with %ju remaining: %m\n"),
-			                     range->in_offset, range->out_offset, range->length,
-			                     range->in_filename, range->out_filename, remaining);
+			err(EXIT_FAILURE, _("failed to copy range %jd:%jd:%ju "
+						"from %s to %s with %ju remaining"),
+						(intmax_t) range->in_offset, (intmax_t) range->out_offset,
+								range->length, range->in_filename,
+								range->out_filename, remaining);
 		if (copied == 0)
 			break;
 
@@ -160,7 +162,7 @@ static void copy_range(struct rangeitem *range) {
 static void handle_range(char* str, struct rangeitem *range)
 {
 	if (parse_range(str, range) != 0)
-		errx(EXIT_FAILURE, _("invalid range format: %s\n"), str);
+		errx(EXIT_FAILURE, _("invalid range format: %s"), str);
 
 	if (!range->length)
 		range->length = range->in_st_size - range->in_offset;
@@ -168,7 +170,7 @@ static void handle_range(char* str, struct rangeitem *range)
 	copy_range(range);
 }
 
-static void handle_range_files(struct rangeitem *range, size_t nrange_files, char **range_files)
+static void handle_range_files(struct rangeitem *range, size_t nrange_files, const char **range_files)
 {
 	for (size_t i = 0; i < nrange_files; i++) {
 		FILE *f = fopen(range_files[i], "r");
@@ -187,7 +189,6 @@ static void handle_range_files(struct rangeitem *range, size_t nrange_files, cha
 			handle_range(line, range);
 		}
 
-		free(range_files[i]);
 		free(line);
 		fclose(f);
 	}
@@ -196,7 +197,7 @@ static void handle_range_files(struct rangeitem *range, size_t nrange_files, cha
 
 int main(const int argc, char **argv)
 {
-	char **range_files = NULL;
+	const char **range_files = NULL;
 	size_t nrange_files = 0;
 	struct stat sb;
 	struct rangeitem range = {0};
@@ -220,7 +221,7 @@ int main(const int argc, char **argv)
 		case 'r':
 			if (!range_files)
 				range_files = xmalloc(sizeof(char *) * argc);
-			range_files[nrange_files++] = xstrdup(optarg);
+			range_files[nrange_files++] = optarg;
 			break;
 		case 'v':
 			verbose = 1;

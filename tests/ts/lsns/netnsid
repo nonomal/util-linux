@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright (C) 2017 Masatake YAMATO <yamato@redhat.com>
 #
@@ -91,7 +91,7 @@ fi
 } > $FIFO
 
 test "$IP_ID" = "$LSNS_ID"
-echo $? >> $TS_OUTPUT
+echo $? >> "$TS_OUTPUT"
 
 cleanup
 ts_finalize

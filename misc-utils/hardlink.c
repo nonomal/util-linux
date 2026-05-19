@@ -424,10 +424,10 @@ static void print_stats(void)
 	jlog(SUMMARY, printf("%-25s %s", _("Saved:"), ssz));
 	free(ssz);
 
-	jlog(SUMMARY, printf(_("%-25s %"PRId64".%06"PRId64" seconds"),
+	jlog(SUMMARY, printf(_("%-25s %jd.%06jd seconds"),
 				_("Duration:"),
-				(int64_t) delta.tv_sec,
-				(int64_t) delta.tv_usec));
+				(intmax_t) delta.tv_sec,
+				(intmax_t) delta.tv_usec));
 }
 
 /**
@@ -635,7 +635,8 @@ static int file_xattrs_equal(const struct file *a, const struct file *b)
 	return ret;
 }
 #else /* !USE_XATTR */
-static int file_xattrs_equal(const struct file *a, const struct file *b)
+static int file_xattrs_equal(const struct file *a __attribute__((__unused__)),
+			     const struct file *b __attribute__((__unused__)))
 {
 	return TRUE;
 }
@@ -881,7 +882,7 @@ static int inserter(const char *fpath, const struct stat *sb,
 	}
 
 	jlog(VERBOSE2, printf(" %5zu: [%" PRIu64 "/%" PRIu64 "/%zu] %s",
-			stats.files, sb->st_dev, sb->st_ino,
+			stats.files, (uint64_t)sb->st_dev, sb->st_ino,
 			(size_t) sb->st_nlink, fpath));
 
 	if ((opts.max_size > 0) && ((uintmax_t) sb->st_size > opts.max_size)) {
@@ -956,6 +957,25 @@ static int inserter(const char *fpath, const struct stat *sb,
  fail:
 	warn(_("cannot continue"));	/* probably ENOMEM */
 	return 0;
+}
+
+static int insert_file(const char *fpath)
+{
+	struct FTW ftw = {};
+	const char *base;
+	struct stat sb;
+	int rc;
+
+	rc = stat(fpath, &sb);
+	if (rc == -1) {
+		warn(_("cannot stat %s"), fpath);
+		return 0;
+	}
+
+	base = strrchr(fpath, '/');
+	ftw.base = base ? base - fpath + 1: 0;
+
+	return inserter(fpath, &sb, FTW_F, &ftw);
 }
 
 #ifdef USE_REFLINK
@@ -1522,8 +1542,10 @@ int main(int argc, char *argv[])
 		if (opts.prio_trees)
 			++curr_tree;
 
-		if (nftw(path, inserter, 20, ftw_flags) == -1)
-			warn(_("cannot process %s"), path);
+		if (nftw(path, inserter, 20, ftw_flags) == -1) {
+			if (errno != ENOTDIR || insert_file(path) != 0)
+				warn(_("cannot process %s"), path);
+		}
 
 		free(path);
 		rootbasesz = 0;

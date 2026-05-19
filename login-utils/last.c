@@ -649,7 +649,7 @@ static int is_phantom(const struct last_control *ctl, struct utmpx *ut)
 		if (fscanf(f, "%u", &loginuid) != 1)
 			ret = 1;
 		fclose(f);
-		if (!ret && pw->pw_uid != loginuid)
+		if (!ret && loginuid != INVALID_UID && pw->pw_uid != loginuid)
 			return 1;
 	} else {
 		struct stat st;
@@ -657,11 +657,13 @@ static int is_phantom(const struct last_control *ctl, struct utmpx *ut)
 
 		mem2strcpy(utline, ut->ut_line, sizeof(ut->ut_line), sizeof(utline));
 
-		snprintf(path, sizeof(path), "/dev/%s", utline);
-		if (stat(path, &st))
-			return 1;
-		if (pw->pw_uid != st.st_uid)
-			return 1;
+		if (utline[0] != ':') {
+			snprintf(path, sizeof(path), "/dev/%s", utline);
+			if (stat(path, &st))
+				return 1;
+			if (pw->pw_uid != st.st_uid)
+				return 1;
+		}
 	}
 	return ret;
 }
@@ -1000,7 +1002,7 @@ int main(int argc, char **argv)
 		.time_fmt = LAST_TIMEFTM_SHORT,
 		.fullnames_mode = false,
 	};
-	char **files = NULL;
+	const char **files = NULL;
 	struct number_buffer nb = {
 		.pos = 0
 	};
@@ -1071,7 +1073,7 @@ int main(int argc, char **argv)
 		case 'f':
 			if (!files)
 				files = xmalloc(sizeof(char *) * argc);
-			files[nfiles++] = xstrdup(optarg);
+			files[nfiles++] = optarg;
 			break;
 		case 'd':
 			ctl.usedns = 1;
@@ -1135,13 +1137,12 @@ int main(int argc, char **argv)
 
 	if (!files) {
 		files = xmalloc(sizeof(char *));
-		files[nfiles++] = xstrdup(ctl.lastb ? _PATH_BTMP : _PATH_WTMP);
+		files[nfiles++] = ctl.lastb ? _PATH_BTMP : _PATH_WTMP;
 	}
 
 	for (i = 0; i < nfiles; i++) {
 		get_boot_time(&ctl.boot_time);
 		process_wtmp_file(&ctl, files[i]);
-		free(files[i]);
 	}
 	free(files);
 	return EXIT_SUCCESS;

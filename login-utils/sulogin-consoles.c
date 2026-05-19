@@ -112,7 +112,7 @@ void emergency_do_mounts(void)
 	}
 
 	if (stat("/", &rt) != 0) {
-		warn("cannot get file status of root file system\n");
+		warn("cannot get file status of root file system");
 		return;
 	}
 
@@ -145,6 +145,7 @@ void emergency_do_mounts(void) { }
 
 #endif /* USE_SULOGIN_EMERGENCY_MOUNT */
 
+#ifdef __linux__
 /*
  * Read and allocate one line from file,
  * the caller has to free the result
@@ -175,7 +176,6 @@ char *oneline(const char * const file)
 	return ret;
 }
 
-#ifdef __linux__
 /*
  *  Read and determine active attribute for tty below
  *  /sys/class/tty, the caller has to free the result.
@@ -815,8 +815,10 @@ int main(int argc, char *argv[])
 		fd = STDIN_FILENO;
 	}
 
-	if (!name)
-		errx(EXIT_FAILURE, "usage: %s [<tty>]\n", program_invocation_short_name);
+	if (!name) {
+		fprintf(stderr, "usage: %s [<tty>]\n", program_invocation_short_name);
+		return EXIT_FAILURE;
+	}
 
 	INIT_LIST_HEAD(&consoles);
 	re = detect_consoles(name, fd, &consoles);

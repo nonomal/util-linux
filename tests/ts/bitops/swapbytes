@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #
 # Copyright (C) 2007 Karel Zak <kzak@redhat.com>
@@ -23,7 +23,7 @@ ts_init "$*"
 
 ts_check_test_command "$TS_HELPER_BYTESWAP"
 
-$TS_HELPER_BYTESWAP >> $TS_OUTPUT
+$TS_HELPER_BYTESWAP >> "$TS_OUTPUT"
 
 ts_finalize
 

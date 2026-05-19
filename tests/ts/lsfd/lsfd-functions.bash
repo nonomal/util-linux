@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright (C) 2021 Masatake YAMATO <yamato@redhat.com>
 #
@@ -184,5 +184,27 @@ function lsfd_check_userns
 		ts_skip "maybe /proc/self/uid_map it not writable";;
 	    *)
 		ts_failed "failed to use a AF_VSOCK socket: $msg [$err]";;
+	esac
+}
+
+function lsfd_check_udp_lite
+{
+	ts_check_test_command "$TS_HELPER_MKFDS"
+
+	local ip=$1
+	if [[ "$ip" == 4 ]]; then
+	    ip=
+	fi
+
+	"$TS_HELPER_MKFDS" --dont-pause --quiet "udp$ip" 3 4 lite=1
+	err=$?
+
+	case $err in
+	    0)
+		return;;
+	    "$EPROTONOSUPPORT")
+		ts_skip "no UDP-Lite available (IPv$1)";;
+	    *)
+		ts_failed "failed to use a IPPROTO_UDPLITE protocol: $msg [$err]";;
 	esac
 }

@@ -47,7 +47,7 @@
 #include "closestream.h"
 #include "monotonic.h"
 #include "timer.h"
-#include "shells.h"
+#include "default_shell.h"
 
 #ifndef F_OFD_GETLK
 #define F_OFD_GETLK	36
@@ -96,7 +96,7 @@ static void __attribute__((__noreturn__)) usage(void)
 static volatile sig_atomic_t timeout_expired = 0;
 
 static void timeout_handler(int sig __attribute__((__unused__)),
-			    siginfo_t *info,
+			    siginfo_t *info __attribute__((__unused__)),
 			    void *context __attribute__((__unused__)))
 {
 #ifdef HAVE_TIMER_CREATE
@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
 				     _("%s requires exactly one command argument"),
 				     argv[optind + 1]);
 			cmd_argv = sh_c_argv;
-			cmd_argv[0] = (char *)ul_default_shell(0, NULL);
+			cmd_argv[0] = (char *)ul_default_shell(UL_SHELL_NOPWD, NULL);
 			cmd_argv[1] = "-c";
 			cmd_argv[2] = argv[optind + 2];
 			cmd_argv[3] = NULL;
@@ -424,10 +424,10 @@ int main(int argc, char *argv[])
 
 		gettime_monotonic(&time_done);
 		timersub(&time_done, &time_start, &delta);
-		printf(_("%s: getting lock took %"PRId64".%06"PRId64" seconds\n"),
+		printf(_("%s: getting lock took %jd.%06jd seconds\n"),
 		       program_invocation_short_name,
-		       (int64_t) delta.tv_sec,
-		       (int64_t) delta.tv_usec);
+		       (intmax_t) delta.tv_sec,
+		       (intmax_t) delta.tv_usec);
 	}
 	status = EX_OK;
 

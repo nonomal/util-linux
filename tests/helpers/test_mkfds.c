@@ -1761,7 +1761,7 @@ static void *make_udp_common(const struct factory *factory, struct fdesc fdescs[
 
 	ssd = socket(family, SOCK_DGRAM, blite? IPPROTO_UDPLITE: 0);
 	if (ssd < 0)
-		err(EXIT_FAILURE,
+		err(errno == EPROTONOSUPPORT? EXIT_EPROTONOSUPPORT: EXIT_FAILURE,
 		    "failed to make a udp socket for server");
 
 	if (setsockopt(ssd, SOL_SOCKET,
@@ -1786,7 +1786,7 @@ static void *make_udp_common(const struct factory *factory, struct fdesc fdescs[
 
 	csd = socket(family, SOCK_DGRAM, blite? IPPROTO_UDPLITE: 0);
 	if (csd < 0) {
-		err(EXIT_FAILURE,
+		err(errno == EPROTONOSUPPORT? EXIT_EPROTONOSUPPORT: EXIT_FAILURE,
 		    "failed to make a udp client socket");
 	}
 
@@ -2977,12 +2977,13 @@ static void *make_bpf_map(const struct factory *factory, struct fdesc fdescs[],
 	const char *sname = ARG_STRING(name);
 
 	int bfd;
-	union bpf_attr attr = {
-		.map_type = imap_type_id,
-		.key_size = 4,
-		.value_size = 4,
-		.max_entries = 10,
-	};
+	union bpf_attr attr;
+
+	memset(&attr, 0, sizeof(attr));
+	attr.map_type = imap_type_id;
+	attr.value_size = 4;
+	attr.key_size = 4;
+	attr.max_entries = 10;
 
 	strncpy(attr.map_name, sname, sizeof(attr.map_name) - 1);
 

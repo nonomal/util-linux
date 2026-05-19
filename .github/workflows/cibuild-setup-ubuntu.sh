@@ -1,5 +1,5 @@
-#!/bin/bash
-     
+#!/usr/bin/env bash
+
 set -ex
 
 export DEBIAN_FRONTEND=noninteractive
@@ -18,7 +18,7 @@ PACKAGES=(
 	libudev-dev
 	gtk-doc-tools
 	mdadm
-	ntp
+	ntpsec
 	socat
 	asciidoctor
 	meson
@@ -34,6 +34,7 @@ PACKAGES=(
 	flex
 	sqlite3
 	libsqlite3-dev
+	libunicode-linebreak-perl
 )
 
 PACKAGES_OPTIONAL=(

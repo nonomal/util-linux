@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright (C) 2026 Masatake YAMATO <yamato@redhat.com>
 #
@@ -74,6 +74,6 @@ INODE=
 
     fi
     wait ${MKFDS_PID}
-} > $TS_OUTPUT 2>&1
+} > "$TS_OUTPUT" 2>&1
 
 ts_finalize

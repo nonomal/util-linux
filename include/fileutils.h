@@ -48,7 +48,10 @@ static inline FILE *fopen_at(int dir, const char *filename,
 		close(fd);
 	return ret;
 }
-#endif
+
+extern FILE *fopen_at_no_link(int dir, const char *filename,
+                             int flags, mode_t perm, const char *mode);
+#endif /* HAVE_OPENAT */
 
 static inline int is_same_inode(const int fd, const struct stat *st)
 {
@@ -74,7 +77,7 @@ static inline struct dirent *xreaddir(DIR *dp)
 
 	while ((d = readdir(dp))) {
 		if (!strcmp(d->d_name, ".") ||
-		    !strcmp(d->d_name, ".."))
+				!strcmp(d->d_name, ".."))
 			continue;
 		break;
 	}
@@ -96,12 +99,22 @@ static inline int close_range(unsigned int first, unsigned int last, int flags)
 
 # if !defined(HAVE_STATX) && defined(HAVE_STRUCT_STATX) && defined(SYS_statx)
 static inline int statx(int fd, const char *restrict path, int flags,
-		    unsigned int mask, struct statx *stx)
+			unsigned int mask, struct statx *stx)
 {
 	return syscall(SYS_statx, fd, path, flags, mask, stx);
 }
 #  define HAVE_STATX 1
 # endif /* SYS_statx */
+
+# if !defined(HAVE_COPY_FILE_RANGE) && defined(SYS_copy_file_range)
+static inline ssize_t copy_file_range(int fd_in, off_t *off_in,
+			int fd_out, off_t *off_out, size_t size, unsigned int flags)
+{
+	return syscall(SYS_copy_file_range, fd_in, off_in, fd_out,
+		off_out, size, flags);
+}
+#  define HAVE_COPY_FILE_RANGE 1
+# endif /* SYS_copy_file_range */
 
 #endif	/* HAVE_SYS_SYSCALL_H */
 
@@ -124,7 +137,7 @@ static inline bool is_dotdir_dirent(const struct dirent *d)
 {
 	return (d && d->d_name[0] == '.'
 		&& (d->d_name[1] == 0
-		    || (d->d_name[1] == '.' && d->d_name[2] == 0)));
+			|| (d->d_name[1] == '.' && d->d_name[2] == 0)));
 }
 
 #endif /* UTIL_LINUX_FILEUTILS */

@@ -22,6 +22,7 @@ libcommon_la_SOURCES = \
 	lib/crc64.c \
 	lib/c_strtod.c \
 	lib/debug.c \
+	lib/default_shell.c \
 	lib/encode.c \
 	lib/env.c \
 	lib/fileutils.c \
@@ -37,7 +38,6 @@ libcommon_la_SOURCES = \
 	lib/randutils.c \
 	lib/sha1.c \
 	lib/sha256.c \
-	lib/shells.c \
 	lib/signames.c \
 	lib/strutils.c \
 	lib/strv.c \
@@ -66,6 +66,24 @@ if HAVE_DIRFD
 libcommon_la_SOURCES += lib/path.c
 libcommon_la_SOURCES += lib/sysfs.c
 libcommon_la_SOURCES += lib/procfs.c
+endif
+endif
+
+EXTRA_LTLIBRARIES += libcommon_logindefs.la
+libcommon_logindefs_la_CFLAGS = $(AM_CFLAGS)
+libcommon_logindefs_la_SOURCES = \
+	lib/logindefs.c
+if HAVE_ECONF
+libcommon_logindefs_la_LIBADD = $(ECONF_LIBS)
+endif
+
+EXTRA_LTLIBRARIES += libcommon_shells.la
+libcommon_shells_la_CFLAGS = $(AM_CFLAGS)
+libcommon_shells_la_SOURCES = \
+	lib/shells.c
+if HAVE_ECONF
+if USE_VENDORDIR
+libcommon_shells_la_LIBADD = $(ECONF_LIBS)
 endif
 endif
 
@@ -183,7 +201,7 @@ test_pty_SOURCES = lib/pty-session.c \
 		   include/pty-session.h \
 		   lib/monotonic.c
 test_pty_CFLAGS = $(AM_CFLAGS) -DTEST_PROGRAM_PTY
-test_pty_LDADD = $(LDADD) libcommon.la $(MATH_LIBS) $(REALTIME_LIBS) -lutil
+test_pty_LDADD = $(LDADD) libcommon.la $(REALTIME_LIBS) -lutil
 endif
 
 if LINUX
@@ -252,5 +270,5 @@ test_logindefs_SOURCES = lib/logindefs.c
 test_logindefs_CPPFLAGS = -DTEST_PROGRAM $(AM_CPPFLAGS)
 test_logindefs_LDADD = $(LDADD) libcommon.la
 if HAVE_ECONF
-test_logindefs_LDADD += -leconf
+test_logindefs_LDADD += $(ECONF_LIBS)
 endif

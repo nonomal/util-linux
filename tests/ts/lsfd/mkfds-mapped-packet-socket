@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright (C) 2022 Masatake YAMATO <yamato@redhat.com>
 #
@@ -58,7 +58,7 @@ for PROTOCOL in $(printf "%d" 0x10) 10000; do
 	    break
 	fi
     done
-done > $TS_OUTPUT 2>&1
+done > "$TS_OUTPUT" 2>&1
 
 if [[ "$ERR" == "$ENOPROTOOPT" ]]; then
     ts_skip "packet socket doesn't support attaching a buffer on this platform"

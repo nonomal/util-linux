@@ -15,7 +15,7 @@
 #include "shells.h"
 
 #if defined (HAVE_LIBECONF) && defined (USE_VENDORDIR)
-static econf_file *open_etc_shells(void)
+econf_file *open_etc_shells(void)
 {
 	econf_err error;
 	econf_file *key_file = NULL;
@@ -120,25 +120,4 @@ extern int is_known_shell(const char *shell_name)
 	endusershell();
 #endif
 	return ret;
-}
-
-const char *ul_default_shell(int flags, const struct passwd *pw)
-{
-	const char *shell = NULL;
-
-	if (!(flags & UL_SHELL_NOENV)) {
-		shell = getenv("SHELL");
-		if (shell && *shell)
-			return shell;
-	}
-	if (!(flags & UL_SHELL_NOPWD)) {
-		if (!pw)
-			pw = getpwuid(getuid());
-		if (pw)
-			shell = pw->pw_shell;
-		if (shell && *shell)
-			return shell;
-	}
-
-	return _PATH_BSHELL;
 }

@@ -652,16 +652,9 @@ static int ui_end(void)
 	if (!ui_enabled)
 		return -EINVAL;
 
-#if defined(HAVE_SLCURSES_H) || defined(HAVE_SLANG_SLCURSES_H)
-	SLsmg_gotorc(ui_lines - 1, 0);
-	SLsmg_refresh();
-#else
-	mvcur(0, ui_cols - 1, ui_lines-1, 0);
-#endif
 	curs_set(1);
 	nl();
 	endwin();
-	printf("\n");
 	ui_enabled = 0;
 	return 0;
 }
@@ -1778,8 +1771,8 @@ static int ui_refresh(struct cfdisk *cf)
 	attron(A_BOLD);
 	ui_center(0, _("Disk: %s"), fdisk_get_devname(cf->cxt));
 	attroff(A_BOLD);
-	ui_center(1, _("Size: %s, %"PRIu64" bytes, %ju sectors"),
-			strsz, bytes, (uintmax_t) fdisk_get_nsectors(cf->cxt));
+	ui_center(1, _("Size: %s, %ju bytes, %ju sectors"),
+			strsz, (uintmax_t) bytes, (uintmax_t) fdisk_get_nsectors(cf->cxt));
 	if (fdisk_get_disklabel_id(cf->cxt, &id) == 0 && id)
 		ui_center(2, _("Label: %s, identifier: %s"),
 				fdisk_label_get_name(lb), id);
@@ -1963,7 +1956,7 @@ static int ui_get_size(struct cfdisk *cf,	/* context */
 			if (insec)
 				user *= fdisk_get_sector_size(cf->cxt);
 			if (user < low) {
-				ui_warnx(_("Minimum size is %"PRIu64" bytes."), low);
+				ui_warnx(_("Minimum size is %ju bytes."), (uintmax_t) low);
 				rc = -ERANGE;
 			}
 			if (user > up && pwr && user < up + (1ULL << pwr * 10))
@@ -1972,7 +1965,7 @@ static int ui_get_size(struct cfdisk *cf,	/* context */
 				user = up;
 
 			if (user > up) {
-				ui_warnx(_("Maximum size is %"PRIu64" bytes."), up);
+				ui_warnx(_("Maximum size is %ju bytes."), (uintmax_t) up);
 				rc = -ERANGE;
 			}
 			if (rc == 0 && insec && expsize)
@@ -2854,6 +2847,7 @@ int main(int argc, char *argv[])
 	free(cf->fields);
 
 	fdisk_unref_table(cf->table);
+	fdisk_unref_table(cf->original_layout);
 #ifdef HAVE_LIBMOUNT
 	mnt_unref_table(cf->fstab);
 	mnt_unref_table(cf->mtab);

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #
 # Copyright (C) 2007-2018 Karel Zak <kzak@redhat.com>
@@ -37,7 +37,7 @@ function call_cal {
 	if [ "$USETERM" == "yes" ]; then
 		$TS_CMD_CAL "$@"
 	fi
-	$TS_CMD_CAL "$@" >> $TS_OUTPUT
+	$TS_CMD_CAL "$@" >> "$TS_OUTPUT"
 	ts_finalize_subtest
 }
 

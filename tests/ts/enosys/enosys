@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Copyright (C) 2022 Thomas Weißschuh <thomas@t-8ch.de>
 #
@@ -56,6 +56,14 @@ $FALLOCATE_TEST > /dev/null 2>> "$TS_OUTPUT"
 "$TS_CMD_ENOSYS" --syscall ioctl --ioctl FIOCLEX $FALLOCATE_TEST > /dev/null 2>> "$TS_OUTPUT"
 "$TS_CMD_ENOSYS" --ioctl FIOCLEX:12 $FALLOCATE_TEST > /dev/null 2>> "$TS_OUTPUT"
 "$TS_CMD_ENOSYS" --ioctl FIOCLEX:ENOMEM $FALLOCATE_TEST > /dev/null 2>> "$TS_OUTPUT"
+
+ts_finalize_subtest
+
+
+ts_init_subtest "list"
+
+res="$("$TS_CMD_ENOSYS" --list 2>>"$TS_ERRLOG")"
+[ -z "$res" ] && echo "No syscalls found. This is odd." >>"$TS_ERRLOG"
 
 ts_finalize_subtest
 

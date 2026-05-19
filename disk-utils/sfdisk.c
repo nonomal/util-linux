@@ -120,7 +120,8 @@ struct sfdisk {
 		     movedata: 1,	/* move data after resize */
 		     movefsync: 1,	/* use fsync() after each write() */
 		     notell : 1,	/* don't tell kernel about new PT */
-		     noact  : 1;	/* do not write to device */
+		     noact  : 1,	/* do not write to device */
+		     no_device_names  : 1;	/* do not display device names in partition rows */
 };
 
 #define SFDISK_PROMPT	">>> "
@@ -516,7 +517,7 @@ static int move_partition_data(struct sfdisk *sf, size_t partno, struct fdisk_pa
 		fprintf(f, "# Area size (sectors/bytes): %ju/%ju\n",
 			(uintmax_t)nsectors, (uintmax_t)nsectors * ss);
 				fprintf(f, "# Step size (sectors/bytes): %" PRIu64 "/%zu\n", step, step_bytes);
-		fprintf(f, "# Steps: %ju\n", ((uintmax_t) nsectors / step) + 1);
+		fprintf(f, "# Steps: %ju\n", (uintmax_t)((uintmax_t) nsectors / step) + 1);
 		fprintf(f, "#\n");
 		fprintf(f, "# <step>: <from> <to> (step offsets in bytes)\n");
 	}
@@ -593,12 +594,12 @@ static int move_partition_data(struct sfdisk *sf, size_t partno, struct fdisk_pa
 
 			if (bytes_per_sec)
 				fprintf(stdout, _("Moved %ju from %ju sectors (%.3f%%, %.1f MiB/s)."),
-					i + 1, nsectors,
+					(uintmax_t)i + 1, (uintmax_t)nsectors,
 					100.0 / ((double) nsectors/(i+1)),
 					(double) (bytes_per_sec / (1024 * 1024)));
 			else
 				fprintf(stdout, _("Moved %ju from %ju sectors (%.3f%%)."),
-					i + 1, nsectors,
+					(uintmax_t)i + 1, (uintmax_t)nsectors,
 					100.0 / ((double) nsectors/(i+1)));
 			fflush(stdout);
 			fputc('\r', stdout);
@@ -622,7 +623,7 @@ next:
 			i = nsectors;
 
 		fprintf(stdout, _("Moved %ju from %ju sectors (%.0f%%)."),
-				i, nsectors,
+				(uintmax_t)i, (uintmax_t)nsectors,
 				100.0 / ((double) nsectors/(i+1)));
 		fputc('\n', stdout);
 	}
@@ -1068,6 +1069,9 @@ static int command_dump(struct sfdisk *sf, int argc, char **argv)
 	if (!dp)
 		err(EXIT_FAILURE, _("failed to allocate dump struct"));
 
+	if (sf->no_device_names)
+		fdisk_script_disable_devnames(dp, 1);
+
 	rc = fdisk_script_read_context(dp, NULL);
 	if (rc)
 		errx(EXIT_FAILURE, _("%s: failed to dump partition table"), devname);
@@ -1417,9 +1421,9 @@ static int command_discard_free(struct sfdisk *sf, int argc, char **argv)
 		range[0] = (uint64_t) fdisk_partition_get_start(pa);
 		range[1] = (uint64_t) fdisk_partition_get_size(pa);
 
-		fdisk_info(sf->cxt, _("Discarding region %"PRIu64
-					     "-%"PRIu64""),
-				range[0], range[0] + range[1] - 1);
+		fdisk_info(sf->cxt, _("Discarding region %ju-%ju"),
+				(uintmax_t) range[0],
+				(uintmax_t) (range[0] + range[1] - 1));
 
 		range[0] *= ss;
 		range[1] *= ss;
@@ -1438,9 +1442,12 @@ done:
 	return rc;
 }
 #else /* BLKDISCARD */
-static int command_discard_free(struct sfdisk *sf, int argc, char **argv)
+static int command_discard_free(struct sfdisk *sf,
+				int argc __attribute__((__unused__)),
+				char **argv __attribute__((__unused__)))
 {
 	fdisk_warnx(sf->cxt, _("Discard unsupported on your system."));
+	return 0;
 }
 #endif /* BLKDISCARD */
 
@@ -2182,6 +2189,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	      _("     --lock[=<mode>]       use exclusive device lock (%s, %s or %s)\n"), "yes", "no", "nonblock");
 	fputs(_(" -N, --partno <num>        specify partition number\n"), out);
 	fputs(_(" -n, --no-act              do everything except write to device\n"), out);
+	fputs(_("     --no-device-names     do not print device names in dump output\n"), out);
 	fputs(_("     --no-reread           do not check whether the device is in use\n"), out);
 	fputs(_("     --no-tell-kernel      do not tell kernel about changes\n"), out);
 	fputs(_(" -O, --backup-file <path>  override default backup file name\n"), out);
@@ -2241,7 +2249,8 @@ int main(int argc, char *argv[])
 		OPT_NOTELL,
 		OPT_RELOCATE,
 		OPT_LOCK,
-		OPT_SECTORSIZE
+		OPT_SECTORSIZE,
+		OPT_NO_DEVICE_NAMES
 	};
 
 	static const struct option longopts[] = {
@@ -2264,6 +2273,7 @@ int main(int argc, char *argv[])
 		{ "list-free", no_argument,     NULL, 'F' },
 		{ "list-types", no_argument,	NULL, 'T' },
 		{ "no-act",  no_argument,       NULL, 'n' },
+		{ "no-device-names", no_argument,     NULL, OPT_NO_DEVICE_NAMES },
 		{ "no-reread", no_argument,     NULL, OPT_NOREREAD },
 		{ "no-tell-kernel", no_argument, NULL, OPT_NOTELL },
 		{ "move-data", optional_argument, NULL, OPT_MOVEDATA },
@@ -2460,6 +2470,9 @@ int main(int argc, char *argv[])
 			break;
 		case OPT_DELETE:
 			sf->act = ACT_DELETE;
+			break;
+		case OPT_NO_DEVICE_NAMES:
+			sf->no_device_names = 1;
 			break;
 		case OPT_NOTELL:
 			sf->notell = 1;

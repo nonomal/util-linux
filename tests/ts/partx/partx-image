@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #
 # Copyright (C) 2010 Davidlohr Bueso <dave@gnu.org>
@@ -36,7 +36,7 @@ for img in $TS_IMGDIR/*.img.xz; do
 		xz -dc $img > $outimg &&
 			$TS_CMD_PARTX $outimg ||
 			echo "failed: $?"
-	} >> $TS_OUTPUT 2>> $TS_ERRLOG
+	} >> "$TS_OUTPUT" 2>> "$TS_ERRLOG"
 	ts_finalize_subtest
 done
 
